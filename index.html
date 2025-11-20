@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS3 Mega-Visualizer</title>
+    <!-- React and Babel for dynamic UI -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS for utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    
+    <style>
+        /* NEUROBRUTALISM CUSTOM STYLES */
+        :root {
+            --bg-color: #f0f0f0;
+            --main-border: 3px solid #000;
+            --hard-shadow: 6px 6px 0px 0px #000;
+            --hard-shadow-hover: 2px 2px 0px 0px #000;
+            --color-accent-1: #FF6B6B; /* Red */
+            --color-accent-2: #4ECDC4; /* Teal */
+            --color-accent-3: #FFE66D; /* Yellow */
+            --color-accent-4: #FF9F1C; /* Orange */
+            --color-accent-5: #C44569; /* Pink */
+            --color-js: #F7DF1E; /* JS Yellow */
+            --color-tw: #38bdf8; /* Tailwind Blue */
+            --color-bs: #7952b3; /* Bootstrap Purple */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: 'Courier New', Courier, monospace;
+            color: #000;
+            overflow-x: hidden;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: #fff; border-left: var(--main-border); }
+        ::-webkit-scrollbar-thumb { background: #000; border: 2px solid #fff; }
+
+        /* Brutalist Component Classes */
+        .neo-box {
+            background: #fff;
+            border: var(--main-border);
+            box-shadow: var(--hard-shadow);
+            transition: all 0.1s ease;
+        }
+        
+        .neo-btn {
+            background: var(--color-accent-3);
+            border: var(--main-border);
+            box-shadow: var(--hard-shadow);
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .neo-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        .neo-btn.active {
+            background: var(--color-accent-1);
+            color: white;
+            transform: translate(2px, 2px);
+            box-shadow: 4px 4px 0px 0px #000;
+        }
+
+        .neo-input {
+            border: var(--main-border);
+            background: #fff;
+            padding: 8px;
+            font-family: inherit;
+            outline: none;
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,0.2);
+        }
+        .neo-input:focus {
+            background: #e0f7fa;
+        }
+
+        /* Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            background: var(--color-accent-1);
+            border: 2px solid black;
+            cursor: pointer;
+            margin-top: -8px; 
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #000;
+            border-radius: 0;
+        }
+
+        /* Animation for the visualizer elements */
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+        }
+
+        /* Dimension Marker Styling - UPDATED */
+        .dimension-line {
+            position: absolute;
+            background-color: #FF00FF;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px; /* Increased Size */
+            font-weight: 900;
+            color: black;
+            text-transform: uppercase;
+            pointer-events: none;
+            white-space: nowrap;
+            border: 1px solid white; /* Better contrast */
+            box-shadow: 2px 2px 0px black;
+            padding: 2px 6px;
+        }
+        /* Lines connecting the box */
+        .dimension-line::after, .dimension-line::before {
+            content: '';
+            position: absolute;
+            background-color: #FF00FF;
+            border: 1px solid black;
+        }
+        /* Horizontal Arrows */
+        .dim-horz::before { left: -8px; top: 50%; width: 8px; height: 4px; margin-top: -2px; border-right: none; }
+        .dim-horz::after { right: -8px; top: 50%; width: 8px; height: 4px; margin-top: -2px; border-left: none; }
+        /* Vertical Arrows */
+        .dim-vert::before { top: -8px; left: 50%; height: 8px; width: 4px; margin-left: -2px; border-bottom: none; }
+        .dim-vert::after { bottom: -8px; left: 50%; height: 8px; width: 4px; margin-left: -2px; border-top: none; }
+
+        /* Syntax highlighting look */
+        .code-keyword { color: #C44569; font-weight: bold; }
+        .code-string { color: #2E8B57; font-weight: bold; }
+        .code-prop { color: #000; font-weight: bold; }
+        .code-tw { color: #0284c7; font-weight: bold; }
+        .code-bs { color: #7952b3; font-weight: bold; }
+        
+        .bg-checkered {
+            background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), 
+                              linear-gradient(-45deg, #ccc 25%, transparent 25%), 
+                              linear-gradient(45deg, transparent 75%, #ccc 75%), 
+                              linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        
+        .grid-overlay {
+            background-size: 50px 50px;
+            background-image: linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body>
+    <div id="root" style="border:100"></div>
+
+    <script type="text/babel">
+        // --- JAVASCRIPT LOGIC: DATABASE GENERATION ---
+        const BASE_DATA = [
+            // 1. BOX MODEL
+            { name: "width", category: "Box Model", type: "length", min: 0, max: 500, unit: "px", def: "200px", desc: "Sets the width of the element." },
+            { name: "height", category: "Box Model", type: "length", min: 0, max: 500, unit: "px", def: "200px", desc: "Sets the height of the element." },
+            { name: "max-width", category: "Box Model", type: "length", min: 0, max: 500, unit: "px", def: "none", desc: "Sets the maximum width of an element." },
+            { name: "min-width", category: "Box Model", type: "length", min: 0, max: 500, unit: "px", def: "0px", desc: "Sets the minimum width of an element." },
+            { name: "max-height", category: "Box Model", type: "length", min: 0, max: 500, unit: "px", def: "none", desc: "Sets the maximum height of an element." },
+            { name: "min-height", category: "Box Model", type: "length", min: 0, max: 500, unit: "px", def: "0px", desc: "Sets the minimum height of an element." },
+            { name: "border-width", category: "Box Model", type: "length", min: 0, max: 20, unit: "px", def: "4px", desc: "Sets the width of the border on all sides." },
+            { name: "border-style", category: "Box Model", type: "select", options: ["solid", "dashed", "dotted", "double", "groove", "ridge", "inset", "outset", "none"], def: "solid", desc: "Sets the style of the border on all sides.", requirement: { prop: "borderWidth", type: "nonzero", fixVal: "4px", msg: "Border width is 0px. Style won't be visible." } },
+            { name: "border-color", category: "Box Model", type: "color", def: "#000000", desc: "Sets the color of the border on all sides.", requirement: { prop: "borderWidth", type: "nonzero", fixVal: "4px", msg: "Border width is 0px. Color won't be visible." } },
+            { name: "border-radius", category: "Box Model", type: "length", min: 0, max: 50, unit: "%", def: "0%", desc: "Rounds the corners of the element." },
+            { name: "box-shadow", category: "Box Model", type: "keyword", options: ["none", "5px 5px 0px #000", "10px 10px 0px #000", "5px 5px 10px #000", "inset 5px 5px 0px #000", "0px 0px 15px 5px rgba(0,0,0,0.5)"], def: "5px 5px 0px #000", desc: "Adds shadow effects around an element's frame." },
+            { name: "box-sizing", category: "Box Model", type: "select", options: ["content-box", "border-box"], def: "content-box", desc: "Defines how the width and height of an element are calculated." },
+            { name: "margin-block", category: "Box Model", type: "length", min: 0, max: 50, unit: "px", def: "0px", desc: "Logical property setting top and bottom margins." },
+            { name: "margin-inline", category: "Box Model", type: "length", min: 0, max: 50, unit: "px", def: "0px", desc: "Logical property setting left and right margins." },
+            { name: "border-image", category: "Box Model", type: "select", options: ["none", "url(https://mdn.mozillademos.org/files/4127/border.png) 30 round"], def: "none", desc: "Allows drawing an image on the borders of elements." },
+            { name: "aspect-ratio", category: "Box Model", type: "select", options: ["auto", "1 / 1", "16 / 9", "4 / 3", "2 / 1"], def: "auto", desc: "Sets a preferred aspect ratio for the box." },
+
+            // 2. TYPOGRAPHY
+            { name: "color", category: "Typography", type: "color", def: "#000000", desc: "Sets the color of the text." },
+            { name: "font-size", category: "Typography", type: "length", min: 10, max: 80, unit: "px", def: "24px", desc: "Sets the size of the font." },
+            { name: "font-weight", category: "Typography", type: "select", options: ["normal", "bold", "100", "400", "700", "900"], def: "normal", desc: "Sets how thick or thin characters in text should be displayed." },
+            { name: "font-family", category: "Typography", type: "select", options: ["monospace", "Arial", "Georgia", "cursive", "fantasy", "system-ui"], def: "monospace", desc: "Specifies the font for an element." },
+            { name: "text-align", category: "Typography", type: "select", options: ["left", "center", "right", "justify", "start", "end"], def: "center", desc: "Specifies the horizontal alignment of text." },
+            { name: "text-decoration", category: "Typography", type: "select", options: ["none", "underline", "overline", "line-through"], def: "none", desc: "Specifies the decoration added to text." },
+            { name: "text-transform", category: "Typography", type: "select", options: ["none", "uppercase", "lowercase", "capitalize"], def: "none", desc: "Controls the capitalization of text." },
+            { name: "letter-spacing", category: "Typography", type: "length", min: -5, max: 20, unit: "px", def: "0px", desc: "Increases or decreases the space between characters." },
+            { name: "line-height", category: "Typography", type: "length", min: 0.5, max: 4, step: 0.1, unit: "", def: "1.5", desc: "Sets the height of a line box." },
+            { name: "text-shadow", category: "Typography", type: "keyword", options: ["none", "2px 2px 0px #ccc", "4px 4px 0px #FF6B6B", "0 0 5px #000"], def: "none", desc: "Adds shadow to text." },
+            { name: "writing-mode", category: "Typography", type: "select", options: ["horizontal-tb", "vertical-rl", "vertical-lr"], def: "horizontal-tb", desc: "Sets whether lines of text are laid out horizontally or vertically." },
+            { name: "direction", category: "Typography", type: "select", options: ["ltr", "rtl"], def: "ltr", desc: "Sets the text direction." },
+            { name: "columns", category: "Typography", type: "select", options: ["auto", "2", "3", "100px 2", "50px auto"], def: "auto", desc: "Sets the number of columns an element should be divided into.", mode: "text" },
+            { name: "column-gap", category: "Typography", type: "length", min: 0, max: 50, unit: "px", def: "10px", desc: "Specifies the gap between columns.", mode: "text" },
+            
+            // 3. FLEXBOX
+            { name: "display", category: "Flexbox", type: "select", options: ["flex", "block", "inline-block", "none"], def: "flex", desc: "Specifies the display behavior.", isContainer: true },
+            { name: "flex-direction", category: "Flexbox", type: "select", options: ["row", "row-reverse", "column", "column-reverse"], def: "row", desc: "Specifies the direction of the flexible items.", isContainer: true, requirement: { prop: "display", vals: ["flex", "inline-flex"], fixVal: "flex", msg: "This property requires a flex container." } },
+            { name: "justify-content", category: "Flexbox", type: "select", options: ["flex-start", "flex-end", "center", "space-between", "space-around", "space-evenly"], def: "flex-start", desc: "Aligns the flexible container's items on main-axis.", isContainer: true, requirement: { prop: "display", vals: ["flex", "inline-flex", "grid", "inline-grid"], fixVal: "flex", msg: "This property requires display: flex or grid." } },
+            { name: "align-items", category: "Flexbox", type: "select", options: ["stretch", "flex-start", "flex-end", "center", "baseline"], def: "stretch", desc: "Aligns the flexible container's items on the cross-axis.", isContainer: true, requirement: { prop: "display", vals: ["flex", "inline-flex", "grid", "inline-grid"], fixVal: "flex", msg: "This property requires display: flex or grid." } },
+            { name: "flex-wrap", category: "Flexbox", type: "select", options: ["nowrap", "wrap", "wrap-reverse"], def: "nowrap", desc: "Specifies whether the flexible items should wrap.", isContainer: true, requirement: { prop: "display", vals: ["flex", "inline-flex"], fixVal: "flex", msg: "This property requires a flex container." } },
+            { name: "gap", category: "Flexbox", type: "length", min: 0, max: 50, unit: "px", def: "10px", desc: "Specifies the gap between items.", isContainer: true, requirement: { prop: "display", vals: ["flex", "inline-flex", "grid", "inline-grid"], fixVal: "flex", msg: "Gap only works with Flexbox or Grid." } },
+            { name: "place-items", category: "Flexbox", type: "select", options: ["center", "start", "end", "stretch"], def: "center", desc: "Shorthand for align-items and justify-items.", isContainer: true, requirement: { prop: "display", vals: ["grid", "inline-grid", "flex", "inline-flex"], fixVal: "grid", msg: "Works best with Grid." } },
+
+            // 4. FLEXBOX (Children)
+            { name: "flex-grow", category: "Flexbox", type: "length", min: 0, max: 10, unit: "", def: "0", desc: "How much the item will grow relative to the rest.", isChildProp: true, requirement: { prop: "display", vals: ["flex", "inline-flex"], fixVal: "flex", msg: "Parent must be display: flex." } },
+            { name: "flex-shrink", category: "Flexbox", type: "length", min: 0, max: 10, unit: "", def: "1", desc: "How much the item will shrink relative to the rest.", isChildProp: true, requirement: { prop: "display", vals: ["flex", "inline-flex"], fixVal: "flex", msg: "Parent must be display: flex." } },
+            { name: "flex-basis", category: "Flexbox", type: "length", min: 0, max: 300, unit: "px", def: "auto", desc: "Initial length of a flexible item.", isChildProp: true, requirement: { prop: "display", vals: ["flex", "inline-flex"], fixVal: "flex", msg: "Parent must be display: flex." } },
+            { name: "align-self", category: "Flexbox", type: "select", options: ["auto", "flex-start", "flex-end", "center", "baseline", "stretch"], def: "auto", desc: "Aligns the selected item inside the container.", isChildProp: true, requirement: { prop: "display", vals: ["flex", "inline-flex", "grid"], fixVal: "flex", msg: "Parent must be Flex or Grid." } },
+            { name: "order", category: "Flexbox", type: "length", min: -5, max: 5, unit: "", def: "0", desc: "Specifies the order of the flexible item.", isChildProp: true, requirement: { prop: "display", vals: ["flex", "inline-flex", "grid"], fixVal: "flex", msg: "Parent must be Flex or Grid." } },
+
+            // 5. GRID
+            { name: "display-grid", category: "Grid", type: "static", value: "grid", def: "grid", desc: "Sets display to grid.", isContainer: true, realProp: "display" },
+            { name: "grid-template-columns", category: "Grid", type: "select", options: ["1fr 1fr", "1fr 1fr 1fr", "100px 1fr", "repeat(3, 1fr)", "auto auto", "minmax(100px, 1fr) 1fr"], def: "1fr 1fr", desc: "Specifies the size of the columns.", isContainer: true, requirement: { prop: "display", vals: ["grid", "inline-grid"], fixVal: "grid", msg: "This property requires display: grid." } },
+            { name: "grid-template-rows", category: "Grid", type: "select", options: ["100px", "100px 100px", "auto", "repeat(2, 1fr)"], def: "100px 100px", desc: "Specifies the size of the rows.", isContainer: true, requirement: { prop: "display", vals: ["grid", "inline-grid"], fixVal: "grid", msg: "This property requires display: grid." } },
+            { name: "grid-gap", category: "Grid", type: "length", min: 0, max: 50, unit: "px", def: "10px", desc: "Shorthand for gap.", isContainer: true, realProp: "gap", requirement: { prop: "display", vals: ["grid", "inline-grid"], fixVal: "grid", msg: "This property requires display: grid." } },
+            { name: "row-gap", category: "Grid", type: "length", min: 0, max: 50, unit: "px", def: "10px", desc: "Gap between rows.", isContainer: true, requirement: { prop: "display", vals: ["grid", "inline-grid"], fixVal: "grid", msg: "This property requires display: grid." } },
+            { name: "column-gap", category: "Grid", type: "length", min: 0, max: 50, unit: "px", def: "10px", desc: "Gap between columns.", isContainer: true, requirement: { prop: "display", vals: ["grid", "inline-grid"], fixVal: "grid", msg: "This property requires display: grid." } },
+            { name: "grid-auto-flow", category: "Grid", type: "select", options: ["row", "column", "dense", "row dense"], def: "row", desc: "Controls how auto-placed items get flowed into the grid.", isContainer: true, requirement: { prop: "display", vals: ["grid", "inline-grid"], fixVal: "grid", msg: "This property requires display: grid." } },
+
+            // 6. BACKGROUNDS & EFFECTS
+            { name: "background-color", category: "Effects", type: "color", def: "#4ECDC4", desc: "Sets the background color." },
+            { name: "background-image", category: "Effects", type: "select", options: ["none", "linear-gradient(to right, #FF6B6B, #FFE66D)", "linear-gradient(45deg, black, transparent)", "radial-gradient(circle, #4ECDC4, #000)", "conic-gradient(from 90deg, #FF6B6B, #4ECDC4, #FFE66D)", "url('https://via.placeholder.com/150')"], def: "none", desc: "Sets one or more background images/gradients." },
+            { name: "background-size", category: "Effects", type: "select", options: ["auto", "cover", "contain", "50%", "10px"], def: "auto", desc: "Specifies the size of the background images." },
+            { name: "background-position", category: "Effects", type: "select", options: ["left top", "center center", "right bottom", "50% 50%"], def: "center center", desc: "Specifies the position of a background image." },
+            { name: "opacity", category: "Effects", type: "length", min: 0, max: 1, step: 0.1, unit: "", def: "1", desc: "Sets the opacity level." },
+            { name: "mix-blend-mode", category: "Effects", type: "select", options: ["normal", "multiply", "screen", "overlay", "darken", "lighten", "color-dodge", "difference"], def: "normal", desc: "How content blends with the background." },
+            { name: "backdrop-filter", category: "Effects", type: "select", options: ["none", "blur(5px)", "brightness(150%)", "contrast(80%)", "grayscale(100%)"], def: "none", desc: "Applies filter to area behind the element.", extraCSS: ".stage-child { background-color: rgba(255,255,255,0.2) !important; }" },
+            { name: "filter", category: "Effects", type: "select", options: ["none", "blur(5px)", "grayscale(100%)", "sepia(100%)", "contrast(200%)", "brightness(1.5)", "drop-shadow(4px 4px 0 black)"], def: "none", desc: "Defines visual effects (like blur and saturation)." },
+            { name: "clip-path", category: "Effects", type: "select", options: ["none", "circle(50%)", "polygon(50% 0%, 0% 100%, 100% 100%)", "inset(10px)", "ellipse(25% 40% at 50% 50%)"], def: "none", desc: "Creates a clipping region." },
+            { name: "mask-image", category: "Effects", type: "select", options: ["none", "linear-gradient(to bottom, black, transparent)", "radial-gradient(circle, black 50%, transparent 50%)"], def: "none", desc: "Sets a mask image to the element.", mode: "image" },
+            { name: "object-fit", category: "Effects", type: "select", options: ["fill", "contain", "cover", "none", "scale-down"], def: "fill", desc: "Specifies how an <img> or <video> should be resized.", mode: "image" },
+
+            // 7. TRANSFORMS (INTERACTIVE)
+            { name: "transform", category: "Transforms", type: "select", options: ["none", "rotate(45deg)", "scale(1.5)", "skew(20deg)", "translate(20px, 20px)", "rotateX(45deg)", "rotateY(45deg)"], def: "none", desc: "Applies a 2D or 3D transformation." },
+            { name: "rotate", category: "Transforms", type: "length", min: 0, max: 360, unit: "deg", def: "0deg", desc: "Rotate element in 2D space." },
+            { name: "rotate-x", category: "Transforms", type: "length", min: 0, max: 360, unit: "deg", def: "0deg", desc: "Rotate element around X-axis (3D).", realProp: "transform" },
+            { name: "rotate-y", category: "Transforms", type: "length", min: 0, max: 360, unit: "deg", def: "0deg", desc: "Rotate element around Y-axis (3D).", realProp: "transform" },
+            { name: "scale", category: "Transforms", type: "length", min: 0.1, max: 3, step: 0.1, unit: "", def: "1", desc: "Scale element size." },
+            { name: "scale-x", category: "Transforms", type: "length", min: 0.1, max: 3, step: 0.1, unit: "", def: "1", desc: "Scale element width.", realProp: "transform" },
+            { name: "scale-y", category: "Transforms", type: "length", min: 0.1, max: 3, step: 0.1, unit: "", def: "1", desc: "Scale element height.", realProp: "transform" },
+            { name: "skew", category: "Transforms", type: "length", min: -90, max: 90, unit: "deg", def: "0deg", desc: "Skew element on X and Y axis." },
+            { name: "skew-x", category: "Transforms", type: "length", min: -90, max: 90, unit: "deg", def: "0deg", desc: "Skew element on X axis.", realProp: "transform" },
+            { name: "skew-y", category: "Transforms", type: "length", min: -90, max: 90, unit: "deg", def: "0deg", desc: "Skew element on Y axis.", realProp: "transform" },
+            { name: "translate-x", category: "Transforms", type: "length", min: -200, max: 200, unit: "px", def: "0px", desc: "Move element horizontally.", realProp: "transform" },
+            { name: "translate-y", category: "Transforms", type: "length", min: -200, max: 200, unit: "px", def: "0px", desc: "Move element vertically.", realProp: "transform" },
+            { name: "transform-origin", category: "Transforms", type: "select", options: ["center", "top left", "bottom right", "50% 50%", "0 0"], def: "center", desc: "The point around which a transformation is applied." },
+            { name: "perspective", category: "Transforms", type: "length", min: 0, max: 1000, unit: "px", def: "800px", desc: "Distance between z=0 and the user to give 3D depth.", isContainer: true },
+            { name: "isolation", category: "Transforms", type: "select", options: ["auto", "isolate"], def: "auto", desc: "Controls whether an element must create a new stacking context." },
+
+            // 8. INTERACTIVITY
+            { name: "cursor", category: "Interactivity", type: "select", options: ["auto", "default", "none", "context-menu", "help", "pointer", "progress", "wait", "cell", "crosshair", "text", "vertical-text", "alias", "copy", "move", "no-drop", "not-allowed", "grab", "grabbing", "e-resize", "n-resize", "ne-resize", "nw-resize", "s-resize", "se-resize", "sw-resize", "w-resize", "ew-resize", "ns-resize", "nesw-resize", "nwse-resize", "col-resize", "row-resize", "all-scroll", "zoom-in", "zoom-out"], def: "auto", desc: "Specifies the type of cursor to be displayed." },
+            { name: "user-select", category: "Interactivity", type: "select", options: ["auto", "none", "text", "all"], def: "auto", desc: "Controls whether the user can select text." },
+            { name: "pointer-events", category: "Interactivity", type: "select", options: ["auto", "none"], def: "auto", desc: "Defines whether or not an element reacts to pointer events." },
+            { name: "caret-color", category: "Interactivity", type: "color", def: "#FF6B6B", desc: "Color of the cursor caret in inputs.", mode: "input" },
+            { name: "accent-color", category: "Interactivity", type: "color", def: "#4ECDC4", desc: "Specifies the accent color for UI controls like checkboxes.", mode: "input" },
+
+            // 9. LAYOUT
+            { name: "position", category: "Layout", type: "select", options: ["static", "relative", "absolute", "fixed", "sticky"], def: "static", desc: "Specifies the type of positioning method.", isContainer: true, childProp: true },
+            { name: "top", category: "Layout", type: "length", min: 0, max: 100, unit: "px", def: "0px", desc: "Affects vertical position.", isContainer: true, childProp: true, requirement: { prop: "position", vals: ["relative", "absolute", "fixed", "sticky"], fixVal: "relative", msg: "Requires position: non-static." } },
+            { name: "left", category: "Layout", type: "length", min: 0, max: 100, unit: "px", def: "0px", desc: "Affects horizontal position.", isContainer: true, childProp: true, requirement: { prop: "position", vals: ["relative", "absolute", "fixed", "sticky"], fixVal: "relative", msg: "Requires position: non-static." } },
+            { name: "right", category: "Layout", type: "length", min: 0, max: 100, unit: "px", def: "0px", desc: "Affects horizontal position (from right).", isContainer: true, childProp: true, requirement: { prop: "position", vals: ["relative", "absolute", "fixed", "sticky"], fixVal: "relative", msg: "Requires position: non-static." } },
+            { name: "bottom", category: "Layout", type: "length", min: 0, max: 100, unit: "px", def: "0px", desc: "Affects vertical position (from bottom).", isContainer: true, childProp: true, requirement: { prop: "position", vals: ["relative", "absolute", "fixed", "sticky"], fixVal: "relative", msg: "Requires position: non-static." } },
+            { name: "z-index", category: "Layout", type: "length", min: -1, max: 10, unit: "", def: "1", desc: "Specifies the stack order.", requirement: { prop: "position", vals: ["relative", "absolute", "fixed", "sticky"], fixVal: "relative", msg: "Z-index does not work on static elements." } },
+            { name: "overflow", category: "Layout", type: "select", options: ["visible", "hidden", "scroll", "auto"], def: "visible", desc: "Specifies what happens if content overflows." },
+            { name: "scroll-snap-type", category: "Layout", type: "select", options: ["none", "x mandatory", "y mandatory", "x proximity", "y proximity"], def: "none", desc: "Enables scroll snapping.", isContainer: true, mode: "scroll", requirement: { prop: "overflow", vals: ["scroll", "auto"], fixVal: "scroll", msg: "Requires overflow: scroll." } },
+
+            // 10. ANIMATION
+            { name: "transition-property", category: "Animation", type: "select", options: ["all", "none", "background-color", "transform", "width", "height", "opacity"], def: "all", desc: "Specifies the name of the CSS property the transition effect is for." },
+            { name: "transition-duration", category: "Animation", type: "length", min: 0, max: 5, step: 0.1, unit: "s", def: "0s", desc: "Specifies how many seconds or milliseconds a transition effect takes to complete." },
+            { name: "transition-timing-function", category: "Animation", type: "select", options: ["ease", "linear", "ease-in", "ease-out", "ease-in-out", "step-start", "step-end"], def: "ease", desc: "Specifies the speed curve of the transition effect." },
+            { name: "transition-delay", category: "Animation", type: "length", min: 0, max: 5, step: 0.1, unit: "s", def: "0s", desc: "Specifies a delay (in seconds) for the transition effect." },
+            { name: "animation-name", category: "Animation", type: "select", options: ["none", "spin", "bounce", "pulse", "wiggle", "shake"], def: "none", desc: "Specifies the name of the @keyframes animation.", extraCSS: "@keyframes spin { 100% { transform: rotate(360deg); } } @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } } @keyframes pulse { 50% { opacity: .5; } } @keyframes wiggle { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } } @keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }" },
+            { name: "animation-duration", category: "Animation", type: "length", min: 0, max: 10, step: 0.1, unit: "s", def: "2s", desc: "Specifies how long an animation should take to complete one cycle." },
+            { name: "animation-timing-function", category: "Animation", type: "select", options: ["ease", "linear", "ease-in", "ease-out", "ease-in-out", "step-start", "step-end"], def: "ease", desc: "Specifies the speed curve of the animation." },
+            { name: "animation-delay", category: "Animation", type: "length", min: 0, max: 5, step: 0.1, unit: "s", def: "0s", desc: "Specifies a delay for the start of an animation." },
+            { name: "animation-iteration-count", category: "Animation", type: "select", options: ["infinite", "1", "2", "3", "5", "10"], def: "infinite", desc: "Specifies the number of times an animation should be played." },
+            { name: "animation-direction", category: "Animation", type: "select", options: ["normal", "reverse", "alternate", "alternate-reverse"], def: "normal", desc: "Specifies whether an animation should be played forwards, backwards or in alternate cycles." },
+            { name: "animation-fill-mode", category: "Animation", type: "select", options: ["none", "forwards", "backwards", "both"], def: "none", desc: "Specifies a style for the element when the animation is not playing (before it starts, after it ends, or both)." },
+            { name: "animation-play-state", category: "Animation", type: "select", options: ["running", "paused"], def: "running", desc: "Specifies whether the animation is running or paused." },
+        ];
+
+        const CSS_DATA = [...BASE_DATA];
+        const SIDES = ['top', 'right', 'bottom', 'left'];
+        SIDES.forEach(side => {
+            CSS_DATA.push({ name: `margin-${side}`, category: "Box Model", type: "length", min: 0, max: 50, unit: "px", def: "0px", desc: `Margin ${side}` });
+            CSS_DATA.push({ name: `padding-${side}`, category: "Box Model", type: "length", min: 0, max: 50, unit: "px", def: "0px", desc: `Padding ${side}` });
+            // Generated border properties
+            CSS_DATA.push({ name: `border-${side}-width`, category: "Box Model", type: "length", min: 0, max: 20, unit: "px", def: "4px", desc: `Sets the width of the ${side} border.` });
+            CSS_DATA.push({ name: `border-${side}-style`, category: "Box Model", type: "select", options: ["solid", "dashed", "dotted", "double", "none"], def: "solid", desc: `Sets the style of the ${side} border.` });
+            CSS_DATA.push({ name: `border-${side}-color`, category: "Box Model", type: "color", def: "#000000", desc: `Sets the color of the ${side} border.` });
+        });
+        const CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'];
+        CORNERS.forEach(corner => {
+             CSS_DATA.push({ name: `border-${corner}-radius`, category: "Box Model", type: "length", min: 0, max: 50, unit: "%", def: "0%", desc: `Defines the radius of the ${corner} corner.` });
+        });
+
+        const toCamelCase = (str) => str.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+
+        const toTailwindClass = (prop, val) => {
+            if(val==='none' || val==='auto') return val;
+            if(prop.startsWith('border-width')) return `border-[${val}]`;
+            if(prop.startsWith('border-color')) return `border-[${val}]`;
+            if(prop.startsWith('border-style')) return `border-${val}`;
+            if(prop === 'border-radius') return `rounded-[${val}]`;
+            
+            // Transforms mapping
+            if (prop === 'rotate' || prop === 'rotate-x' || prop === 'rotate-y') return `rotate-[${val}]`; // Simplified for visualizer (TW needs arbitrary for specific deg)
+            if (prop === 'scale' || prop === 'scale-x' || prop === 'scale-y') return `scale-[${val}]`;
+            if (prop === 'skew' || prop === 'skew-x' || prop === 'skew-y') return `skew-[${val}]`;
+            if (prop === 'translate-x' || prop === 'translate-y') return `translate-[${val}]`;
+
+            return `[${prop}:${val.replace(/ /g, '_')}]`;
+        };
+        
+        const toBootstrapClass = (prop, val) => {
+            // Simplified BS logic for demo
+            if(prop === 'display' && val === 'flex') return 'd-flex';
+            if(prop === 'display' && val === 'grid') return 'd-grid';
+            return `style="${prop}: ${val}"`;
+        };
+
+        // --- VISUAL MARKER WITH REM ---
+        const DimensionOverlay = ({ prop, val }) => {
+            if (!val || !val.includes('px')) return null;
+            const numVal = parseInt(val);
+            if (isNaN(numVal) || numVal === 0) return null;
+            
+            // REM Calculation for display
+            const remVal = (numVal / 16).toFixed(3) + 'rem';
+            const label = `${val} (${remVal})`;
+
+            let style = {};
+
+            const renderLines = (s, type) => (
+                <div className={`dimension-line ${type}`} style={s}>{label}</div>
+            );
+
+            if (prop === 'margin-right') return renderLines({ right: `-${numVal}px`, top: '50%', width: `${numVal}px`, height: '2px', marginTop: '-1px' }, 'dim-horz');
+            if (prop === 'margin-left') return renderLines({ left: `-${numVal}px`, top: '50%', width: `${numVal}px`, height: '2px', marginTop: '-1px' }, 'dim-horz');
+            if (prop === 'margin-top') return renderLines({ top: `-${numVal}px`, left: '50%', height: `${numVal}px`, width: '2px', marginLeft: '-1px' }, 'dim-vert');
+            if (prop === 'margin-bottom') return renderLines({ bottom: `-${numVal}px`, left: '50%', height: `${numVal}px`, width: '2px', marginLeft: '-1px' }, 'dim-vert');
+            
+            if (prop === 'padding-right') return renderLines({ right: 0, top: '50%', width: `${numVal}px`, height: '2px', marginTop: '-1px', background: '#4ECDC4' }, 'dim-horz');
+            if (prop === 'padding-left') return renderLines({ left: 0, top: '50%', width: `${numVal}px`, height: '2px', marginTop: '-1px', background: '#4ECDC4' }, 'dim-horz');
+            if (prop === 'padding-top') return renderLines({ top: 0, left: '50%', height: `${numVal}px`, width: '2px', marginLeft: '-1px', background: '#4ECDC4' }, 'dim-vert');
+            if (prop === 'padding-bottom') return renderLines({ bottom: 0, left: '50%', height: `${numVal}px`, width: '2px', marginLeft: '-1px', background: '#4ECDC4' }, 'dim-vert');
+
+            if (prop === 'width') return renderLines({ bottom: '-20px', left: 0, width: '100%', height: '2px' }, 'dim-horz');
+            if (prop === 'height') return renderLines({ right: '-20px', top: 0, height: '100%', width: '2px' }, 'dim-vert');
+            
+            if (prop === 'max-width') return renderLines({ bottom: '-30px', left: 0, width: '100%', height: '2px', borderTop: '2px dashed red', color: 'red' }, 'dim-horz');
+            if (prop === 'min-width') return renderLines({ bottom: '-10px', left: 0, width: '100%', height: '2px', borderTop: '2px dotted green', color: 'green' }, 'dim-horz');
+
+            if (prop === 'top') return renderLines({ top: `-${numVal}px`, left: '50%', height: `${numVal}px`, width: '2px', background: '#FF9F1C' }, 'dim-vert');
+            if (prop === 'left') return renderLines({ left: `-${numVal}px`, top: '50%', width: `${numVal}px`, height: '2px', background: '#FF9F1C' }, 'dim-horz');
+            if (prop === 'right') return renderLines({ right: `-${numVal}px`, top: '50%', width: `${numVal}px`, height: '2px', background: '#FF9F1C' }, 'dim-horz');
+            if (prop === 'bottom') return renderLines({ bottom: `-${numVal}px`, left: '50%', height: `${numVal}px`, width: '2px', background: '#FF9F1C' }, 'dim-vert');
+
+            return null;
+        };
+
+        const SyntaxViewer = ({ prop, val }) => {
+            const [mode, setMode] = React.useState('CSS');
+            const camelProp = toCamelCase(prop);
+            const jsVal = `"${val}"`;
+            const syntaxMap = {
+                'CSS': { code: `${prop}: ${val};`, color: 'text-white' },
+                'JS': { code: `el.style.${camelProp} = ${jsVal};`, color: 'text-[#F7DF1E]' },
+                'React': { code: `style={{ ${camelProp}: ${jsVal} }}`, color: 'text-[#61DAFB]' },
+                'TypeScript': { code: `const style: React.CSSProperties = {\n  ${camelProp}: ${jsVal}\n};`, color: 'text-[#3178C6]' },
+                'Angular': { code: `<div [style.${prop}]="'${val}'"></div>`, color: 'text-[#DD0031]' },
+                'Node/JSS': { code: `const styles = {\n  ${camelProp}: ${jsVal}\n};`, color: 'text-[#339933]' },
+                'Tailwind': { code: toTailwindClass(prop, val), color: 'text-[#38bdf8]' },
+                'Bootstrap': { code: toBootstrapClass(prop, val), color: 'text-[#7952b3]' }
+            };
+            return (
+                <div className="border-t-2 border-black bg-gray-900 text-white p-0">
+                    <div className="flex border-b border-gray-700 overflow-x-auto">
+                        {Object.keys(syntaxMap).map(m => (
+                            <button key={m} onClick={() => setMode(m)} className={`px-4 py-2 text-xs font-bold uppercase ${mode === m ? 'bg-gray-700' : 'text-gray-400'}`}>{m}</button>
+                        ))}
+                    </div>
+                    <div className="p-6 font-mono text-2xl font-bold">
+                        <code className={syntaxMap[mode].color}>{syntaxMap[mode].code}</code>
+                    </div>
+                </div>
+            );
+        };
+
+        const ResponsiveGuide = ({ isOpen, onClose }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+                    <div className="bg-white border-4 border-black p-6 max-w-lg w-full shadow-[8px_8px_0_0_#000] relative" onClick={e => e.stopPropagation()}>
+                        <button onClick={onClose} className="absolute top-2 right-2 font-bold text-xl">&times;</button>
+                        <h2 className="text-2xl font-black mb-4">RESPONSIVE CHEAT SHEET</h2>
+                        <p>Detailed guide content here...</p>
+                    </div>
+                </div>
+            );
+        };
+
+        function App() {
+            const [searchTerm, setSearchTerm] = React.useState("");
+            const [selectedProp, setSelectedProp] = React.useState(CSS_DATA[0]);
+            const [currentValue, setCurrentValue] = React.useState(CSS_DATA[0].def);
+            const [activeTab, setActiveTab] = React.useState("Box Model");
+            const [numBoxes, setNumBoxes] = React.useState(1);
+            const [targetChild, setTargetChild] = React.useState(0);
+            const [viewportSize, setViewportSize] = React.useState('100%');
+            const [showGuide, setShowGuide] = React.useState(false);
+            
+            // NEW: Context Tracking for BORDERS & Layout
+            const [contextStyles, setContextStyles] = React.useState({
+                display: 'flex',
+                position: 'static',
+                overflow: 'visible',
+                borderWidth: '4px',
+                borderStyle: 'solid',
+                borderColor: '#000000',
+                borderRadius: '0%',
+                borderTopWidth: '4px', borderTopStyle: 'solid', borderTopColor: '#000000',
+                borderRightWidth: '4px', borderRightStyle: 'solid', borderRightColor: '#000000',
+                borderBottomWidth: '4px', borderBottomStyle: 'solid', borderBottomColor: '#000000',
+                borderLeftWidth: '4px', borderLeftStyle: 'solid', borderLeftColor: '#000000',
+            });
+
+            const categories = [...new Set(CSS_DATA.map(d => d.category))];
+            const filteredProps = CSS_DATA.filter(p => p.name.includes(searchTerm.toLowerCase()) && p.category === activeTab);
+
+            const handlePropClick = (prop) => {
+                setSelectedProp(prop);
+                setCurrentValue(prop.def);
+                if (prop.mode === 'scroll') setNumBoxes(10); 
+                else if (prop.isContainer) setNumBoxes(3);
+                else setNumBoxes(1);
+                setTargetChild(0); 
+            };
+            
+            // Update context logic
+            React.useEffect(() => {
+                if (selectedProp.name === 'display') setContextStyles(prev => ({ ...prev, display: currentValue }));
+                if (selectedProp.name === 'position') setContextStyles(prev => ({ ...prev, position: currentValue }));
+                if (selectedProp.name === 'overflow') setContextStyles(prev => ({ ...prev, overflow: currentValue }));
+                
+                // GLOBAL BORDER PERSISTENCE
+                if (selectedProp.name === 'border-width') {
+                     setContextStyles(prev => ({ ...prev, borderWidth: currentValue, borderTopWidth: currentValue, borderRightWidth: currentValue, borderBottomWidth: currentValue, borderLeftWidth: currentValue }));
+                }
+                if (selectedProp.name === 'border-style') {
+                     setContextStyles(prev => ({ ...prev, borderStyle: currentValue, borderTopStyle: currentValue, borderRightStyle: currentValue, borderBottomStyle: currentValue, borderLeftStyle: currentValue }));
+                }
+                if (selectedProp.name === 'border-color') {
+                     setContextStyles(prev => ({ ...prev, borderColor: currentValue, borderTopColor: currentValue, borderRightColor: currentValue, borderBottomColor: currentValue, borderLeftColor: currentValue }));
+                }
+                if (selectedProp.name === 'border-radius') setContextStyles(prev => ({ ...prev, borderRadius: currentValue }));
+
+                // SIDE BORDER PERSISTENCE
+                const sides = ['top', 'right', 'bottom', 'left'];
+                sides.forEach(side => {
+                    if(selectedProp.name === `border-${side}-width`) setContextStyles(prev => ({...prev, [`border${side.charAt(0).toUpperCase() + side.slice(1)}Width`]: currentValue}));
+                    if(selectedProp.name === `border-${side}-style`) setContextStyles(prev => ({...prev, [`border${side.charAt(0).toUpperCase() + side.slice(1)}Style`]: currentValue}));
+                    if(selectedProp.name === `border-${side}-color`) setContextStyles(prev => ({...prev, [`border${side.charAt(0).toUpperCase() + side.slice(1)}Color`]: currentValue}));
+                });
+
+            }, [currentValue, selectedProp.name]);
+
+            const checkRequirement = () => {
+                if (!selectedProp.requirement) return null;
+                const req = selectedProp.requirement;
+                
+                let currentContextVal = contextStyles[req.prop];
+                // Handle width parsing for numeric check
+                if (req.prop === 'borderWidth' && req.type === 'nonzero') {
+                    const num = parseFloat(currentContextVal);
+                    if (num === 0) {
+                         return (
+                            <div className="mt-4 p-4 bg-[#ffeb3b] border-4 border-black font-black text-black shadow-[4px_4px_0_0_#000] animate-pulse flex flex-col gap-2">
+                                <div className="flex items-center"><i className="fas fa-exclamation-triangle mr-2 text-xl"></i><span>{req.msg}</span></div>
+                                <div className="text-xs font-mono">Current {req.prop}: <span className="bg-black text-white px-1">{currentContextVal}</span></div>
+                                <button onClick={() => setContextStyles(prev => ({ ...prev, [req.prop]: req.fixVal }))} className="neo-btn text-xs p-2 bg-white hover:bg-gray-100 self-start">Fix Now</button>
+                            </div>
+                        );
+                    }
+                    return null;
+                }
+
+                if (req.vals && !req.vals.includes(currentContextVal)) {
+                    return (
+                        <div className="mt-4 p-4 bg-[#ffeb3b] border-4 border-black font-black text-black shadow-[4px_4px_0_0_#000] animate-pulse flex flex-col gap-2">
+                            <div className="flex items-center"><i className="fas fa-exclamation-triangle mr-2 text-xl"></i><span>{req.msg}</span></div>
+                            <div className="text-xs font-mono">Current {req.prop}: <span className="bg-black text-white px-1">{currentContextVal}</span></div>
+                            <button onClick={() => setContextStyles(prev => ({ ...prev, [req.prop]: req.fixVal }))} className="neo-btn text-xs p-2 bg-white hover:bg-gray-100 self-start">Fix Now (Set {req.prop}: {req.fixVal})</button>
+                        </div>
+                    );
+                }
+                return null;
+            };
+
+            const getBoxStyle = (index) => {
+                const baseStyle = {
+                    width: '80px', height: '80px',
+                    backgroundColor: ['#FF6B6B', '#4ECDC4', '#FFE66D', '#C44569'][index % 4],
+                    // USE CONTEXT FOR BORDERS (Global Fallback)
+                    borderWidth: contextStyles.borderWidth,
+                    borderStyle: contextStyles.borderStyle,
+                    borderColor: contextStyles.borderColor,
+                    borderRadius: contextStyles.borderRadius,
+                    
+                    // Override with specific side styles if they exist
+                    borderTopWidth: contextStyles.borderTopWidth, borderTopStyle: contextStyles.borderTopStyle, borderTopColor: contextStyles.borderTopColor,
+                    borderRightWidth: contextStyles.borderRightWidth, borderRightStyle: contextStyles.borderRightStyle, borderRightColor: contextStyles.borderRightColor,
+                    borderBottomWidth: contextStyles.borderBottomWidth, borderBottomStyle: contextStyles.borderBottomStyle, borderBottomColor: contextStyles.borderBottomColor,
+                    borderLeftWidth: contextStyles.borderLeftWidth, borderLeftStyle: contextStyles.borderLeftStyle, borderLeftColor: contextStyles.borderLeftColor,
+
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '20px', transition: 'all 0.3s ease', position: 'relative', fontWeight: 'bold',
+                    boxSizing: 'border-box', // Important for borders
+                    // Apply specific transform context for 3D
+                    transformStyle: 'preserve-3d' 
+                };
+
+                if (selectedProp.isChildProp && index === targetChild) {
+                    // We don't override border here anymore to avoid conflict, use outline for selection
+                    baseStyle.outline = '4px dashed white'; 
+                    baseStyle[toCamelCase(selectedProp.name)] = currentValue;
+                }
+                
+                if (!selectedProp.isContainer && !selectedProp.isChildProp) {
+                    baseStyle.width = '200px';
+                    baseStyle.height = '200px';
+                    // Important: Apply user selected prop
+                    const propName = toCamelCase(selectedProp.realProp || selectedProp.name);
+                    
+                    // Handle Virtual Transform Properties
+                    if (['rotateX', 'rotateY', 'scaleX', 'scaleY', 'skewX', 'skewY', 'translateX', 'translateY'].includes(propName)) {
+                         const func = propName; // e.g., rotateX
+                         baseStyle.transform = `${func}(${currentValue})`;
+                    } 
+                    else if (propName === 'rotate' || propName === 'scale' || propName === 'skew') {
+                         baseStyle.transform = `${propName}(${currentValue})`; // Fallback for basic
+                    }
+                    else {
+                         baseStyle[propName] = currentValue;
+                    }
+                }
+                return baseStyle;
+            };
+
+            const getContainerStyle = () => {
+                const baseContainer = {
+                    width: viewportSize, height: '350px', 
+                    border: '3px dashed #ccc',
+                    display: contextStyles.display, // Use context!
+                    padding: '20px', position: 'relative',
+                    overflow: selectedProp.mode === 'scroll' ? 'auto' : 'hidden',
+                    backgroundColor: '#fff', transition: 'all 0.3s ease',
+                    alignItems: 'center', justifyContent: 'center',
+                    perspective: '800px', // Always apply perspective for 3D transforms
+                    transformStyle: 'preserve-3d'
+                };
+
+                if (selectedProp.isContainer && !selectedProp.childProp) {
+                    const propName = selectedProp.realProp || selectedProp.name;
+                    const activeDisplay = (propName === 'display') ? currentValue : contextStyles.display;
+                    
+                    const layoutStyles = {
+                        display: activeDisplay,
+                        [toCamelCase(propName)]: currentValue,
+                    };
+                    
+                    if (activeDisplay === 'flex' || activeDisplay === 'inline-flex') {
+                         layoutStyles.gap = '10px';
+                         layoutStyles.flexWrap = 'wrap';
+                         if (propName !== 'align-items') layoutStyles.alignItems = 'flex-start'; 
+                         if (propName !== 'justify-content') layoutStyles.justifyContent = 'flex-start';
+                    }
+                    if (activeDisplay === 'grid') {
+                         layoutStyles.gridTemplateColumns = '1fr 1fr';
+                         layoutStyles.gap = '10px';
+                    }
+                    return { ...baseContainer, ...layoutStyles };
+                } 
+                else if (selectedProp.isChildProp) {
+                    return { ...baseContainer, display: contextStyles.display, gap: '10px', flexWrap: 'wrap', alignItems: 'flex-start' };
+                }
+                return baseContainer;
+            };
+
+            const adjustValue = (amount) => {
+                const match = currentValue.match(/^(-?[\d.]+)(.*)$/);
+                if (match) {
+                    let val = parseFloat(match[1]);
+                    let unit = match[2];
+                    val += amount;
+                    if (selectedProp.min !== undefined && val < selectedProp.min) val = selectedProp.min;
+                    if (selectedProp.max !== undefined && val > selectedProp.max) val = selectedProp.max;
+                    val = Math.round(val * 10) / 10;
+                    setCurrentValue(val + unit);
+                }
+            };
+
+            const randomizeValue = () => {
+                if (selectedProp.options) {
+                    const randomOpt = selectedProp.options[Math.floor(Math.random() * selectedProp.options.length)];
+                    setCurrentValue(randomOpt);
+                } else if (selectedProp.type === 'length') {
+                    const range = selectedProp.max - selectedProp.min;
+                    const randomVal = Math.floor(Math.random() * range) + selectedProp.min;
+                    setCurrentValue(randomVal + selectedProp.unit);
+                } else if (selectedProp.type === 'color') {
+                    const randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+                    setCurrentValue(randomColor);
+                }
+            };
+
+            const resetValue = () => setCurrentValue(selectedProp.def);
+
+            const copyToClipboard = () => {
+                const text = `${selectedProp.realProp || selectedProp.name}: ${currentValue};`;
+                navigator.clipboard.writeText(text);
+                alert(`Copied: ${text}`);
+            };
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
+                    <ResponsiveGuide isOpen={showGuide} onClose={() => setShowGuide(false)} />
+                    <header className="mb-8 border-b-4 border-black pb-4 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                        <div>
+                            <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-black" style={{textShadow: "4px 4px 0px #FF6B6B"}}>CSS3 Mega-Visualizer</h1>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setShowGuide(true)} className="neo-btn p-4 bg-[#4ECDC4] hover:bg-teal-300"><i className="fas fa-book mr-2"></i> GUIDE</button>
+                        </div>
+                    </header>
+
+                    <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+                        <aside className="md:col-span-4 lg:col-span-3 flex flex-col gap-4">
+                            <div className="neo-box p-4">
+                                <label className="block font-bold mb-2 uppercase">Find Property</label>
+                                <input type="text" className="neo-input w-full" placeholder="e.g. border..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {categories.map(cat => <button key={cat} onClick={() => setActiveTab(cat)} className={`neo-btn text-xs p-2 ${activeTab === cat ? 'active' : ''}`}>{cat}</button>)}
+                            </div>
+                            <div className="neo-box flex-1 overflow-y-auto max-h-[500px] p-0">
+                                {filteredProps.map((prop, idx) => (
+                                    <div key={idx} onClick={() => handlePropClick(prop)} className={`p-3 border-b-2 border-black cursor-pointer hover:bg-yellow-200 font-bold ${selectedProp.name === prop.name ? 'bg-black text-white' : ''}`}>{prop.name}</div>
+                                ))}
+                            </div>
+                        </aside>
+
+                        <main className="md:col-span-8 lg:col-span-9 flex flex-col gap-6">
+                            <div className="neo-box p-2 bg-white relative">
+                                <div className="flex justify-between items-center bg-black text-white px-4 py-2 border-b-2 border-black">
+                                    <span className="font-bold text-sm">THE STAGE</span>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setViewportSize('375px')} className="text-xs bg-gray-700 px-2 py-1 rounded">Mobile</button>
+                                        <button onClick={() => setViewportSize('100%')} className="text-xs bg-gray-700 px-2 py-1 rounded">Desktop</button>
+                                    </div>
+                                </div>
+                                <div className="stage-container" style={getContainerStyle()}>
+                                    {Array.from({ length: numBoxes }).map((_, i) => (
+                                        <div key={i} className="stage-child" style={getBoxStyle(i)}>
+                                            {selectedProp.category === 'Typography' ? 'Txt' : (i + 1)}
+                                            {!selectedProp.isContainer && !selectedProp.isChildProp && i === 0 && (
+                                                <DimensionOverlay prop={selectedProp.name} val={currentValue} />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <SyntaxViewer prop={selectedProp.realProp || selectedProp.name} val={currentValue} />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="neo-box p-6 bg-[#FF6B6B]">
+                                    <h2 className="text-2xl font-black bg-white inline-block px-2 mb-4 border-2 border-black">WHAT IS IT?</h2>
+                                    <p className="text-lg font-bold bg-white/90 p-4 border-2 border-black">{selectedProp.desc}</p>
+                                    {checkRequirement()}
+                                </div>
+                                <div className="neo-box p-6 bg-[#4ECDC4]">
+                                    <h2 className="text-2xl font-black bg-white inline-block px-2 mb-4 border-2 border-black">TWEAK IT</h2>
+                                    <div className="bg-white p-4 border-2 border-black shadow-[4px_4px_0px_black]">
+                                        {/* SECONDARY CONTROL FOR BORDER WIDTH VISIBILITY */}
+                                        {selectedProp.name.includes('border') && !selectedProp.name.includes('width') && (
+                                            <div className="mb-4 p-2 bg-yellow-100 border border-black">
+                                                <label className="block text-xs font-bold mb-1">Context Border Width (Ensure &gt; 0px)</label>
+                                                <div className="flex gap-2 items-center">
+                                                    <button onClick={() => setContextStyles(p => ({...p, borderWidth: '0px', borderTopWidth:'0px', borderRightWidth:'0px', borderBottomWidth:'0px', borderLeftWidth:'0px'}))} className="px-2 border border-black bg-white text-xs">0px</button>
+                                                    <input 
+                                                        type="range" min="0" max="20" 
+                                                        value={parseInt(contextStyles.borderWidth) || 0} 
+                                                        onChange={(e) => {
+                                                            const val = e.target.value + 'px';
+                                                            setContextStyles(p => ({...p, borderWidth: val, borderTopWidth: val, borderRightWidth: val, borderBottomWidth: val, borderLeftWidth: val}));
+                                                        }}
+                                                        className="flex-1"
+                                                    />
+                                                    <span className="text-xs font-mono">{contextStyles.borderWidth}</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {selectedProp.options ? (
+                                            <select className="neo-input w-full" value={currentValue} onChange={(e) => setCurrentValue(e.target.value)}>
+                                                {selectedProp.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                                            </select>
+                                        ) : (
+                                            <div className="flex flex-col gap-2">
+                                                {selectedProp.type === 'length' && (
+                                                    <div className="flex justify-between items-center">
+                                                        <button onClick={() => adjustValue(-1)} className="w-8 h-8 border border-black flex items-center justify-center bg-gray-200 hover:bg-gray-300 font-bold">-</button>
+                                                        <input 
+                                                            type="range" 
+                                                            min={selectedProp.min} max={selectedProp.max} 
+                                                            value={parseFloat(currentValue) || 0} 
+                                                            onChange={(e) => setCurrentValue(e.target.value + (selectedProp.unit || ""))}
+                                                            className="flex-1 mx-2"
+                                                        />
+                                                        <button onClick={() => adjustValue(1)} className="w-8 h-8 border border-black flex items-center justify-center bg-gray-200 hover:bg-gray-300 font-bold">+</button>
+                                                    </div>
+                                                )}
+                                                <input type={selectedProp.type === 'color' ? 'color' : 'text'} className="neo-input w-full" value={currentValue} onChange={(e) => setCurrentValue(e.target.value)} />
+                                                
+                                                {/* NEW REM DISPLAY (From recent request) */}
+                                                {currentValue.includes('px') && (
+                                                    <div className="mt-2 text-xs font-mono bg-gray-100 p-1 border border-black inline-block">
+                                                        ≈ {(parseFloat(currentValue) / 16).toFixed(3)}rem
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
